@@ -140,7 +140,7 @@ def train_model(tokenized_dataset, tokenizer, config):
         trainer.train()
 
     print("Finished training pass")
-    print("Saving model to " + config.out)
+    print("Saving model to " + config.output_model_dir)
 
     model.save_pretrained(config.output_model_dir)
 

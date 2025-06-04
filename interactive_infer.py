@@ -5,11 +5,11 @@ import torch
 from runtime_config import runtime_config
 
 
-print(f"Loading model {runtime_config.model_name} from {runtime_config.model_output_dir}...")
+print(f"Loading model {runtime_config.model_name} from {runtime_config.model_path}...")
 
 # Load tokenizer and model
-tokenizer = AutoTokenizer.from_pretrained(runtime_config.model_output_dir)
-model = AutoModelForCausalLM.from_pretrained(runtime_config.model_output_dir)
+tokenizer = AutoTokenizer.from_pretrained(runtime_config.model_path)
+model = AutoModelForCausalLM.from_pretrained(runtime_config.model_path)
 
 print("✅ Model loaded successfully")
 
