@@ -7,19 +7,12 @@ from transformers import DataCollatorForLanguageModeling
 from accelerate import Accelerator
 from config import config
 
-# ------------------------
-# Step 1: Override Configuration
-# You probably don't need to do this, so skip it.
-# ------------------------
-
-# Compute derived paths
-config["tokenized_output_dir"] = os.path.join(config["output_root"], config["tokenized_output_subdir"])
-config["output_model_dir"] = os.path.join(config["output_root"], config["output_model_subdir"])
 
 # ------------------------
-# Step 2: Load Files
+# Step 1: Load Files
 # ------------------------
 def load_codebase(config):
+    print("Loading training material...")
     examples = []
     for dirpath, _, filenames in os.walk(config["root_dir"]):
         for fname in filenames:
@@ -30,17 +23,21 @@ def load_codebase(config):
                     with open(fpath, "r", encoding="utf-8") as f:
                         text = f.read()
                         if text.strip():
-                            examples.append({
+                            toAppend = {
                                 "source": config["valid_extensions"][ext],
                                 "path": fpath,
                                 "text": text
-                            })
+                            }
+                            examples.append(toAppend)
+                            if config["verbose"]:
+                                print("Adding file: " + toAppend)
                 except Exception as e:
                     print(f"Skipped {fpath}: {e}")
+    print("Finished loading training material")
     return Dataset.from_list(examples)
 
 # ------------------------
-# Step 3: Tokenize
+# Step 2: Tokenize
 # ------------------------
 def tokenize_dataset(dataset, tokenizer, config):
     def tokenize_fn(example):
@@ -53,7 +50,7 @@ def tokenize_dataset(dataset, tokenizer, config):
     return dataset.map(tokenize_fn, batched=True, remove_columns=["text", "path", "source"])
 
 # ------------------------
-# Step 4: Train
+# Step 3: Train
 # ------------------------
 def train_model(tokenized_dataset, tokenizer, config):
     model = AutoModelForCausalLM.from_pretrained(config["model_name"])
@@ -84,7 +81,7 @@ def train_model(tokenized_dataset, tokenizer, config):
     tokenizer.save_pretrained(config["output_model_dir"])
 
 # ------------------------
-# Step 5: Run Pipeline
+# Step 4: Run Pipeline
 # ------------------------
 def main():
     tokenizer = AutoTokenizer.from_pretrained(config["model_name"], trust_remote_code=True)
