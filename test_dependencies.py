@@ -47,3 +47,6 @@ except Exception as e:
     print(f"❌ Hugging Face access check failed: {e}")
     print("➡️  Run 'huggingface-cli login' in your terminal and ensure you have access to the model.")
 
+
+print("If all checkmarks, you are good to go!")
+
