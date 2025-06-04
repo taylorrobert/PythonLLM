@@ -1,7 +1,7 @@
 ﻿import torch
 import sys
 from huggingface_hub import HfApi, HfFolder, hf_hub_download
-from config import config
+from training_config import config
 
 version = sys.version_info
 

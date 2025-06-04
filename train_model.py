@@ -5,46 +5,77 @@ from datasets import Dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
 from transformers import DataCollatorForLanguageModeling
 from accelerate import Accelerator
-from config import config
+from training_config import training_config
 
 
 # ------------------------
 # Step 1: Load Files
 # ------------------------
 def load_codebase(config):
-    print("Loading training material...")
+    print(f"Loading training material from: {os.path.abspath(config.root_dir)}")
+    print(f"Looking for files with extensions: {list(config.valid_extensions)}")
     examples = []
-    for dirpath, _, filenames in os.walk(config.root_dir):
+
+    if not os.path.exists(config.root_dir):
+        raise ValueError(f"Directory {config.root_dir} does not exist!")
+
+    file_count = 0
+    for dirpath, dirnames, filenames in os.walk(config.root_dir):
+        # Remove excluded folders from dirnames to prevent recursion into them
+        excluded = [d for d in dirnames if d in config.exclude_folders]
+        if excluded and config.verbose:
+            print(f"Skipping excluded directories in {dirpath}: {excluded}")
+        dirnames[:] = [d for d in dirnames if d not in config.exclude_folders]
+
+        file_count += len(filenames)
+
+        filenames = [f for f in filenames if os.path.splitext(f)[1] in config.valid_extensions]
+
+        if config.verbose:
+            print(f"\nScanning directory: {dirpath}")
+            print(f"Files with valid extensions found in directory: {filenames}")
+
         for fname in filenames:
             ext = os.path.splitext(fname)[1]
-            if ext in config.valid_extensions:
-                fpath = os.path.join(dirpath, fname)
-                try:
-                    with open(fpath, "r", encoding="utf-8") as f:
-                        text = f.read()
-                        if text.strip():
-                            to_append = {
-                                "source": config.valid_extensions[ext],
-                                "path": fpath,
-                                "text": text
-                            }
-                            examples.append(to_append)
-                            if config.verbose:
-                                print("Adding file: " + fpath)
-                except Exception as e:
-                    print(f"Skipped {fpath}: {e}")
+            fpath = os.path.join(dirpath, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    text = f.read()
+                    if text.strip():
+                        to_append = {
+                            "source": config.valid_extensions[ext],
+                            "path": fpath,
+                            "text": text
+                        }
+                        examples.append(to_append)
+                        if config.verbose:
+                            print(f"Added file: {fpath}")
+            except Exception as e:
+                print(f"Skipped {fpath}: {e}")
 
-    output = Dataset.from_list(examples);
+    if not examples:
+        print("\nDiagnostic information:")
+        print(f"Total files scanned: {file_count}")
+        print(f"Valid extensions being searched for: {list(config.valid_extensions)}")
+        print(f"Excluded folders: {config.exclude_folders}")
+        raise ValueError(
+            "No valid files were found to process! Please check your root_dir and valid_extensions configuration.")
 
-    print("Finished loading training material")
+    output = Dataset.from_list(examples)
+    print(
+        f"\nFinished loading training material. Processed {len(examples)} files out of {file_count} total files found.")
 
-    return output;
+    return output
+
 
 # ------------------------
 # Step 2: Tokenize
 # ------------------------
 def tokenize_dataset(dataset, tokenizer, config):
     print("Tokenizing dataset...")
+    if len(dataset) == 0:
+        raise ValueError("Dataset is empty! Cannot proceed with tokenization.")
+
     def tokenize_fn(example):
         tokenized = tokenizer(
             example["text"],
@@ -52,15 +83,17 @@ def tokenize_dataset(dataset, tokenizer, config):
             padding="max_length",
             max_length=config.max_length
         )
-        if config.verbose:
-            print("Tokenized: " + tokenized)
         return tokenized
 
-    output = dataset.map(tokenize_fn, batched=True, remove_columns=["text", "path", "source"])
+    output = dataset.map(
+        tokenize_fn,
+        batched=True,
+        remove_columns=dataset.column_names  # This will dynamically get the columns to remove
+    )
 
     print("Finished tokenizing dataset")
-
     return output
+
 
 # ------------------------
 # Step 3: Train
@@ -106,15 +139,64 @@ def train_model(tokenized_dataset, tokenizer, config):
 
     print("Finished training")
 
+    return model
+
+
+# ------------------------
+# Utilities
+# ------------------------
+def debug_directory_scan(config):
+    print("\n=== Directory Scan Debug ===")
+    print(f"Root directory: {os.path.abspath(config.root_dir)}")
+    print(f"Directory exists: {os.path.exists(config.root_dir)}")
+
+    all_files = []
+    for dirpath, dirnames, filenames in os.walk(config.root_dir):
+        for fname in filenames:
+            ext = os.path.splitext(fname)[1].lower()  # normalize extension
+            all_files.append((fname, ext))
+
+    print("\nFound files with extensions:")
+    ext_count = {}
+    for _, ext in all_files:
+        ext_count[ext] = ext_count.get(ext, 0) + 1
+
+    for ext, count in ext_count.items():
+        print(f"{ext}: {count} files {'(VALID)' if ext in config.valid_extensions else ''}")
+
+    print("\nValid extensions configured:", list(config.valid_extensions))
+    print("Excluded folders:", config.exclude_folders)
+    print("=== End Debug ===\n")
+
+# ------------------------
+# Initializers
+# ------------------------
+def get_tokenizer(config):
+    tokenizer = AutoTokenizer.from_pretrained(config.model_name, trust_remote_code=True)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
+    return tokenizer
+
+
 # ------------------------
 # Step 4: Run Pipeline
 # ------------------------
 def main():
-    tokenizer = AutoTokenizer.from_pretrained(config.model_name, trust_remote_code=True)
+    config = training_config
+    #debug_directory_scan(config)
+
+    #Tokenizer
+    tokenizer = get_tokenizer(config)
+
+    #Load training data
     raw_dataset = load_codebase(config)
-    print(f"Loaded {len(raw_dataset)} files")
+
+    #Tokenize dataset
     tokenized_dataset = tokenize_dataset(raw_dataset, tokenizer, config)
-    train_model(tokenized_dataset, tokenizer, config)
+
+    #Train model
+    model = train_model(tokenized_dataset, tokenizer, config)
+    
     print("✅ Training complete.")
 
 if __name__ == "__main__":
