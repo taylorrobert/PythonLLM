@@ -109,11 +109,13 @@ def train_model(tokenized_dataset, tokenizer, config):
         per_device_train_batch_size=config.batch_size,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
         num_train_epochs=config.epochs,
-        learning_rate=config.lr,
+        learning_rate=config.learning_rate,
         fp16=config.fp16,
-        save_strategy="epoch",
-        logging_steps=10,
-        report_to="none"
+        save_strategy="steps", #can use 'epochs',
+        save_steps=config.checkpoint_save_steps,
+        logging_steps=config.logging_steps,
+        report_to="none",
+        save_total_limit=config.checkpoint_save_limit
     )
 
     trainer = Trainer(
@@ -124,10 +126,21 @@ def train_model(tokenized_dataset, tokenizer, config):
         data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
     )
 
-    trainer.train()
+    checkpoints = []
+    if os.path.exists(config.output_model_dir):
+        for directory in os.listdir(config.output_model_dir):
+            if directory.startswith("checkpoint"):
+                checkpoint_path = os.path.join(config.output_model_dir, directory)
+                checkpoints.append(checkpoint_path)
+
+    if checkpoints:
+        trainer.train(resume_from_checkpoint=True)
+    else:
+        print("No checkpoints found. Starting from scratch.")
+        trainer.train()
 
     print("Finished training pass")
-    print("Saving model to " + config.outmodel_model_dir)
+    print("Saving model to " + config.out)
 
     model.save_pretrained(config.output_model_dir)
 

@@ -1,5 +1,6 @@
 ﻿class RuntimeConfig:
-    model_output_dir = "C:/Code/LLMOutput/finetuned_model"
+    model_path = "C:/Code/LLMOutput/finetuned_model"
+    model_name = "bigcode/starcoderbase-1b"
     use_gpu = True
     max_new_tokens = 150
     do_sample = True
