@@ -1,5 +1,7 @@
 ﻿import torch
 import sys
+from huggingface_hub import HfApi, HfFolder, hf_hub_download
+from config import config
 
 version = sys.version_info
 
@@ -23,4 +25,25 @@ print("PyTorch version:", torch.__version__) #Should be: 2.5.1+cu121
 print("CUDA version (from PyTorch): " + torch.version.cuda) #Should be: 12.1
 print("Graphics Device:" + torch.cuda.get_device_name(0))
 
+
+
+try:
+    print("Testing huggingface CLI...")
+    token = HfFolder.get_token()
+    if not token:
+        raise ValueError("No Hugging Face token found.")
+    api = HfApi(token=token)
+    user = api.whoami()
+    print(f"✅ Hugging Face token valid. Logged in as: {user['name']}")
+
+    print("Checking access to model...")
+    try:
+        hf_hub_download(repo_id=config["model_name"], filename="config.json", use_auth_token=True)
+        print(f"✅ Access to model '{config['model_name']}' confirmed.")
+    except Exception as model_error:
+        raise PermissionError(
+            f"Token is valid, but does not have access to model '{config['model_name']}': {model_error}. You must request access on HuggingFace.")
+except Exception as e:
+    print(f"❌ Hugging Face access check failed: {e}")
+    print("➡️  Run 'huggingface-cli login' in your terminal and ensure you have access to the model.")
 

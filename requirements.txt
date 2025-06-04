@@ -9,6 +9,7 @@ transformers
 datasets
 accelerate
 tokenizers
+huggingface_hub[cli]
 
 # Optional utilities
 scipy
