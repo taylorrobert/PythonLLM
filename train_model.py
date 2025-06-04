@@ -14,55 +14,70 @@ from config import config
 def load_codebase(config):
     print("Loading training material...")
     examples = []
-    for dirpath, _, filenames in os.walk(config["root_dir"]):
+    for dirpath, _, filenames in os.walk(config.root_dir):
         for fname in filenames:
             ext = os.path.splitext(fname)[1]
-            if ext in config["valid_extensions"]:
+            if ext in config.valid_extensions:
                 fpath = os.path.join(dirpath, fname)
                 try:
                     with open(fpath, "r", encoding="utf-8") as f:
                         text = f.read()
                         if text.strip():
-                            toAppend = {
-                                "source": config["valid_extensions"][ext],
+                            to_append = {
+                                "source": config.valid_extensions[ext],
                                 "path": fpath,
                                 "text": text
                             }
-                            examples.append(toAppend)
-                            if config["verbose"]:
-                                print("Adding file: " + toAppend)
+                            examples.append(to_append)
+                            if config.verbose:
+                                print("Adding file: " + fpath)
                 except Exception as e:
                     print(f"Skipped {fpath}: {e}")
+
+    output = Dataset.from_list(examples);
+
     print("Finished loading training material")
-    return Dataset.from_list(examples)
+
+    return output;
 
 # ------------------------
 # Step 2: Tokenize
 # ------------------------
 def tokenize_dataset(dataset, tokenizer, config):
+    print("Tokenizing dataset...")
     def tokenize_fn(example):
-        return tokenizer(
+        tokenized = tokenizer(
             example["text"],
             truncation=True,
             padding="max_length",
-            max_length=config["max_length"]
+            max_length=config.max_length
         )
-    return dataset.map(tokenize_fn, batched=True, remove_columns=["text", "path", "source"])
+        if config.verbose:
+            print("Tokenized: " + tokenized)
+        return tokenized
+
+    output = dataset.map(tokenize_fn, batched=True, remove_columns=["text", "path", "source"])
+
+    print("Finished tokenizing dataset")
+
+    return output
 
 # ------------------------
 # Step 3: Train
 # ------------------------
 def train_model(tokenized_dataset, tokenizer, config):
-    model = AutoModelForCausalLM.from_pretrained(config["model_name"])
+    print("Beginning training...")
+
+    model = AutoModelForCausalLM.from_pretrained(config.model_name)
     model.resize_token_embeddings(len(tokenizer))
 
     args = TrainingArguments(
-        output_dir=config["output_model_dir"],
-        per_device_train_batch_size=config["batch_size"],
-        gradient_accumulation_steps=config["gradient_accumulation_steps"],
-        num_train_epochs=config["epochs"],
-        learning_rate=config["lr"],
-        fp16=config["fp16"],
+        output_dir=config.output_model_dir,
+        per_device_train_batch_size=config.batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
+        num_train_epochs=config.epochs,
+        learning_rate=config.lr,
+        fp16=config.fp16,
         save_strategy="epoch",
         logging_steps=10,
         report_to="none"
@@ -77,14 +92,25 @@ def train_model(tokenized_dataset, tokenizer, config):
     )
 
     trainer.train()
-    model.save_pretrained(config["output_model_dir"])
-    tokenizer.save_pretrained(config["output_model_dir"])
+
+    print("Finished training pass")
+    print("Saving model to " + config.outmodel_model_dir)
+
+    model.save_pretrained(config.output_model_dir)
+
+    print("Saved model")
+
+    print("Saving tokenizer output to " + config.output_model_dir)
+
+    tokenizer.save_pretrained(config.output_model_dir)
+
+    print("Finished training")
 
 # ------------------------
 # Step 4: Run Pipeline
 # ------------------------
 def main():
-    tokenizer = AutoTokenizer.from_pretrained(config["model_name"], trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(config.model_name, trust_remote_code=True)
     raw_dataset = load_codebase(config)
     print(f"Loaded {len(raw_dataset)} files")
     tokenized_dataset = tokenize_dataset(raw_dataset, tokenizer, config)

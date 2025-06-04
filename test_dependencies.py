@@ -38,11 +38,11 @@ try:
 
     print("Checking access to model...")
     try:
-        hf_hub_download(repo_id=config["model_name"], filename="config.json", use_auth_token=True)
-        print(f"✅ Access to model '{config['model_name']}' confirmed.")
+        hf_hub_download(repo_id=config.model_name, filename="config.json", use_auth_token=True)
+        print(f"✅ Access to model '{config.model_name}' confirmed.")
     except Exception as model_error:
         raise PermissionError(
-            f"Token is valid, but does not have access to model '{config['model_name']}': {model_error}. You must request access on HuggingFace.")
+            f"Token is valid, but does not have access to model '{config.model_name}': {model_error}. You must request access on HuggingFace.")
 except Exception as e:
     print(f"❌ Hugging Face access check failed: {e}")
     print("➡️  Run 'huggingface-cli login' in your terminal and ensure you have access to the model.")

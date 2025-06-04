@@ -2,8 +2,8 @@
 
 class Config:
     verbose = True
-    output_root = "./output_folder"
-    root_dir = "./your_repo_path_here"  # path to your company repo
+    root_dir = "C:\Code\ConvoGenCloud"  # root path to your repo/training material
+    output_root = "C:\Code\LLMOutput"
     model_name = "bigcode/starcoderbase-1b"
     tokenized_output_subdir = "tokenized_data"
     output_model_subdir = "finetuned_model"
