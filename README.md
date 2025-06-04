@@ -1,6 +1,12 @@
 # Homegrown LLM
 A GPT model that is designed to run on frontend, backend, and database code.
 
+## Getting Started
+1. Open training_config.py. 
+2. Set is_first_run=True. 
+3. Set training_dataset_dir to a valid empty folder. This is where the model will be outputted. 
+4. Set output_root to valid directories.
+
 ## How to interpret training output
 Example log:
 
