@@ -1,7 +1,7 @@
 ﻿import torch
 import sys
 from huggingface_hub import HfApi, HfFolder, hf_hub_download
-from training_config import training_config
+from config.training_config import training_config
 
 
 def check_dependencies(model_name, ignore_cuda=False, ignore_huggingface=False):

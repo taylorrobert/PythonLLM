@@ -9,10 +9,20 @@ class TrainingConfig:
     verbose = True
 
     # Root path to your repo/training material directory. Use forward slashes (/).
-    training_dataset_dir = os.path.normpath("C:/Code/ConvoGenCloud")
+    training_dataset_dir = os.path.normpath("C:/Code/ConvoGenCloud/API/ConvoGen.API/ConvoGen.API/Security")
 
     # root output for the model. Use forward slashes (/).
     output_root = os.path.normpath("C:/Code/LLMOutput")
+
+    # Controls whether to prompt cleanup at the end of training.
+    # True automatically cleans up state data.
+    # False does not clean up state data.
+    auto_cleanup = False
+
+    # Controls whether to resume training from a previous checkpoint.
+    # If False, training will start from scratch.
+    # If True, training will resume from the latest checkpoint (if any) and the tokenized dataset (if it exists).
+    auto_resume_state = False
 
     #############
     # Uncommon config - You can ignore until you know what you're doing.
@@ -65,9 +75,7 @@ class TrainingConfig:
 
     # Subdirectory paths
     model_subdir = "model"
-    tokenizer_subdir = "tokenizer"
-    tokenized_output_subdir = "tokenized_output"
-    checkpoint_subdir = "checkpoints"
+    tokenized_output_subdir = "tokenized_dataset"
 
     max_length = 1024
 
@@ -87,26 +95,18 @@ class TrainingConfig:
                         # Higher makes faster progress, but may skip over the best solution (unstable or oscillating loss).
                         # Lower learns slower, but is a more stable convergence. May cause it to get stuck in local minima.
 
-    # Danger: you do not need to set this manually in most cases.
-    # The program will know if it is the first run in most cases because the directory will be empty.
+    # Danger: you do not need to set this to True manually in most cases.
+    # The program will know if it is the first run because the directory will be empty.
     is_first_run = False
 
     @property
     def model_dir(self):
         return os.path.join(self.output_root, self.model_subdir)
 
-    @property
-    def tokenizer_dir(self):
-        return os.path.join(self.output_root, self.tokenizer_subdir)
-
     #NOT CURRENT IMPLEMENTED - doesn't do anything for now
     @property
     def tokenized_output_dir(self):
         return os.path.join(self.output_root, self.tokenized_output_subdir)
-
-    @property
-    def checkpoint_dir(self):
-        return os.path.join(self.output_root, self.checkpoint_subdir)
 
 
 # Instantiate the config
