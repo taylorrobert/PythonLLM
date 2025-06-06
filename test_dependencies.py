@@ -101,3 +101,10 @@ def print_dependency_check_results(results):
 
     if (results['huggingface_access'] is False or results['model_access'] is False):
         print("➡️  Run 'huggingface-cli login' in your terminal and ensure you have access to the model.")
+
+
+if __name__ == "__main__":
+    all_passed, results = check_dependencies(model_name=training_config.model_name,
+                                 ignore_cuda=False,
+                                 ignore_huggingface=True)
+    print_dependency_check_results(results)
